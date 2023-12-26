@@ -4,65 +4,90 @@ import re
 
 class Field:
     def __init__(self, value):
-        self._value = None  # Приватний атрибут для значення
-        self.set_value(value)
+        self.__value = None
+        self.value = value
 
-    def get_value(self):
-        return self._value
+    @property
+    def value(self):
+        return self.__value
 
-    def set_value(self, value):
-        self._value = value
+    @value.setter
+    def value(self, new_value):
+        if not self.is_valid(new_value):
+            raise ValueError("Incorrect value")
+        self.__value = new_value
 
-    def __str__(self):
-        return str(self._value)
+    def is_valid(self, value):
+        return True
+
+    def __str__(self):  
+        return str(self.value)
+
 
 class Name(Field):
-    def __init__(self, first_name):
-        self.set_first_name(first_name)
+    pass
 
-    def set_first_name(self, first_name):
-        if not isinstance(first_name, str) or not first_name.strip():
-            raise ValueError("First name is required and must be a non-empty string")
-        self.set_value(first_name.strip())
-
+    
 class Phone(Field):
-    def is_valid(self, number):
-        if re.match(r'^\d{10}$', number):
-            return True
-        return False
 
-    def set_value(self, value):
-        if not self.is_valid(value):
-            raise ValueError('Invalid number')
-        super().set_value(value)
+    # @property
+    # def value(self):
+    #     return self.__value
+
+    # @value.setter
+    # def value(self, new_value: str):
+    #     if self.is_valid(new_value):
+    #         self.__value = new_value
+    #     else:
+    #         raise ValueError("invalid phone number")
+
+    def is_valid(self, new_value):
+        if len(new_value) == 10 and new_value.isdigit():
+            return True
+        else:
+            return False
+
+    def __str__(self):
+        return self.value
 
 class Birthday(Field):
-    def set_value(self, date_str):
+    @property
+    def value(self):
+        return self.__value
+
+    @value.setter
+    def value(self, new_value: str):
+        if self.is_valid(new_value):
+            self.__value = datetime.strptime(new_value, "%Y-%m-%d").date()
+        else:
+            raise ValueError("Invalid date format. Use YYYY-MM-DD.")
+
+    def is_valid(self, date_str):
         if date_str:
             try:
-                date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+                datetime.strptime(date_str, "%Y-%m-%d")
+                return True
             except ValueError:
-                raise ValueError("Invalid date format. Use YYYY-MM-DD.")
-            self._value = date_obj
-        else:
-            self._value = None
+                return False
 
     def days_to_birthday(self):
-        if self._value:
+        if self.__value:
             today = datetime.now().date()
-            next_birthday = datetime(today.year, self._value.month, self._value.day).date()
+            next_birthday = datetime(today.year, self.__value.month, self.__value.day).date()
             if today > next_birthday:
-                next_birthday = datetime(today.year + 1, self._value.month, self._value.day).date()
+                next_birthday = datetime(today.year + 1, self.__value.month, self.__value.day).date()
             days_left = (next_birthday - today).days
             return days_left
         return None
-            
 
 class Record:
     def __init__(self, name, birthday=None):
         self.name = Name(name)
         self.phones = []
-        self.birthday = Birthday(birthday)
+        if birthday:
+            self.birthday = Birthday(birthday)
+        else:
+            self.birthday = birthday
 
     def add_phone(self, phone):
         try:
@@ -81,19 +106,19 @@ class Record:
 
     def edit_phone(self, old_phone, new_phone):
         for phone_obj in self.phones:
-            if phone_obj._value == old_phone:
-                phone_obj._value = new_phone
+            if phone_obj.value == old_phone:
+                phone_obj.value = new_phone
                 return f"Phone number {old_phone} edited successfully"
         raise ValueError(f"Phone number {old_phone} not found")
 
     def find_phone(self, phone):
         for phone_obj in self.phones:
-            if phone_obj._value == phone:
+            if phone_obj.value == phone:
                 return phone_obj
         return None
 
     def get_phones(self):
-        return [str(phone._value) for phone in self.phones]
+        return [str(phone.value) for phone in self.phones]
 
 
     def __str__(self):
@@ -103,7 +128,7 @@ class Record:
 
 class AddressBook(UserDict):
     def add_record(self, record):
-        self.data[record.name._value] = record
+        self.data[record.name.value] = record
 
     def iterator(self, batch_size=1):
         current_index = 0
@@ -161,4 +186,3 @@ print(john.birthday.days_to_birthday())  # Виведення кількості
 for batch in book.iterator(batch_size=1):
     for record in batch:
         print(record)
-
